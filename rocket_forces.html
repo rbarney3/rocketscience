@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Rocket Forces — Drag & Drop</title>
+<style>
+  body{
+    font-family: "Comic Sans MS", Arial, sans-serif;
+    background: linear-gradient(#87ceeb,#e0f7fa);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  h1 { margin: 0 0 8px 0; }
+
+  #main {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-wrap: nowrap;
+  }
+
+  #labels {
+    display:flex;
+    gap:12px;
+    margin-bottom:12px;
+    justify-content:center;
+    flex-wrap:wrap;
+    width:100%;
+  }
+
+  .label {
+    background:#ffeb3b;
+    border:2px solid #444;
+    padding:8px 12px;
+    border-radius:8px;
+    cursor:grab;
+    font-weight:bold;
+    user-select:none;
+  }
+
+  #rocket-area{
+    position:relative;
+    width:360px;              /* adjust if rocket.png is a different size */
+    height:600px;
+    background: url("rocket.png") center/contain no-repeat;
+    border:2px dashed rgba(0,0,0,0.15);
+    border-radius:8px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+  }
+
+  .dropzone{
+    position:absolute;
+    width:130px;
+    height:52px;
+    border:2px dashed rgba(0,0,0,0.35);
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:bold;
+    color:#444;
+    background: rgba(255,255,255,0.85);
+    transition: border-color .15s, background .15s;
+  }
+
+  /* Positions */
+  #thrust  { left:50%;  top:540px; transform:translateX(-50%); }
+  #lift    { left:-120px; top:260px; }
+  /* Drag moved to the right ~3 inches (≈300px) from rocket edge */
+  #drag    { left: 360px; top:160px; } /* adjust left value for fine-tuning */
+  #gravity { left:50%;  top:140px; transform:translateX(-50%); }
+
+  .correct {
+    background:#4caf50;
+    color:white;
+    border-color:#2e7d32;
+  }
+
+  #definitions{
+    width:280px;
+    background: rgba(255,255,255,0.98);
+    border:2px solid #444;
+    border-radius:12px;
+    padding:14px;
+    box-shadow: 2px 2px 10px rgba(0,0,0,0.12);
+  }
+  #definitions h2 { margin-top:0; text-align:center; }
+  #definitions p  { margin:8px 0; font-size:0.95rem; }
+
+  #controls { margin-top:14px; text-align:center; width:100%; }
+  button {
+    padding:8px 14px;
+    font-size:1rem;
+    border-radius:8px;
+    border: none;
+    cursor:pointer;
+  }
+  #reset { background:#ff5722; color:white; }
+
+  @media (max-width:900px){
+    #main { flex-direction: column; align-items:center; }
+    #definitions { width:90%; order:3; margin-top:12px; }
+    #rocket-area { width:320px; height:520px; }
+    #thrust { top:480px; }
+    #gravity { top:120px; }
+    #drag { left:260px; } /* slightly closer for narrow screens */
+  }
+</style>
+</head>
+<body>
+  <h1>Forces on a Rocket</h1>
+  <p style="margin:6px 0 14px 0; text-align:center; max-width:760px;">
+    Drag each force name into the four boxes around the rocket. Use the definitions to help you.
+  </p>
+
+  <div id="labels">
+    <div class="label" draggable="true" data-force="Thrust" id="label-thrust">Thrust</div>
+    <div class="label" draggable="true" data-force="Lift" id="label-lift">Lift</div>
+    <div class="label" draggable="true" data-force="Drag" id="label-drag">Drag</div>
+    <div class="label" draggable="true" data-force="Gravity" id="label-gravity">Gravity</div>
+  </div>
+
+  <div id="main">
+    <div id="rocket-area">
+      <div class="dropzone" id="thrust"  data-accept="Thrust"></div>
+      <div class="dropzone" id="lift"    data-accept="Lift"></div>
+      <div class="dropzone" id="drag"    data-accept="Drag"></div>
+      <div class="dropzone" id="gravity" data-accept="Gravity"></div>
+    </div>
+
+    <aside id="definitions">
+      <h2>Force Definitions</h2>
+      <p><strong>DRAG</strong> — air resistance that slows the rocket down because of friction from the air.</p>
+      <p><strong>LIFT</strong> — a force determined by the shape of the body and fins to stabilize and control direction of flight.</p>
+      <p><strong>GRAVITY</strong> — a constant force pulling objects toward Earth.</p>
+      <p><strong>THRUST</strong> — a force created through a chemical reaction that expels gases and pushes the rocket upward.</p>
+    </aside>
+  </div>
+
+  <div id="controls">
+    <button id="reset">Reset</button>
+    <div id="message" style="margin-top:10px; font-weight:bold; color:#2e7d32; visibility:hidden;">Great job — all matched!</div>
+  </div>
+
+<script>
+  const labels = document.querySelectorAll('.label');
+  const zones  = document.querySelectorAll('.dropzone');
+  const resetBtn = document.getElementById('reset');
+  const message = document.getElementById('message');
+
+  labels.forEach(label => {
+    label.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/plain', label.dataset.force);
+      setTimeout(()=> label.style.visibility = 'hidden', 0);
+    });
+    label.addEventListener('dragend', () => label.style.visibility = 'visible');
+  });
+
+  zones.forEach(zone => {
+    zone.addEventListener('dragover', e => e.preventDefault());
+    zone.addEventListener('drop', e => {
+      e.preventDefault();
+      const force = e.dataTransfer.getData('text/plain');
+      if (force === zone.dataset.accept) {
+        zone.textContent = force;
+        zone.classList.add('correct');
+        document.querySelector(`.label[data-force="${force}"]`).style.display = 'none';
+        checkComplete();
+      } else {
+        const prev = zone.style.borderColor;
+        zone.style.borderColor = 'crimson';
+        setTimeout(()=> zone.style.borderColor = prev, 400);
+      }
+    });
+  });
+
+  function checkComplete(){
+    if ([...zones].every(z => z.classList.contains('correct')))
+      message.style.visibility = 'visible';
+  }
+
+  resetBtn.addEventListener('click', () => {
+    zones.forEach(z => {
+      z.textContent = '';
+      z.classList.remove('correct');
+      z.style.borderColor = '';
+    });
+    labels.forEach(l => { l.style.display='inline-block'; l.style.visibility='visible'; });
+    message.style.visibility = 'hidden';
+  });
+</script>
+</body>
+</html>
